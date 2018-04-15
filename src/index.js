@@ -14,11 +14,12 @@ export const CHANGES = 'hasChanges'
 export const getItems = get(ITEMS)
 export const getId = get(ID)
 export const getItemsIds = flow(getItems, map(getId))
-export const setRevision = setField(REV, hash)
 export const getRev = get(REV)
 export const buildIndex = keyBy(ID)
-export const indexItemsById = replaceField('items', buildIndex)
 export const withSavedFresh = transformer => flow(at(['saved', 'fresh']), spread(transformer))
+
+// Process an array of items.
+export const setRevision = setField(REV, hash)
 export const createFeedInfo = flow(
   map(setRevision),
   createObj(ITEMS),
@@ -58,13 +59,6 @@ export const compareItems = flow(
   setField('deleted', getDeleted),
   mergeFields(addCreatedUpdated),
 )
-export const createResult = buildCompare(indexItemsById, (saved, fresh) => ({ saved, fresh }))
-
-export const checkFeed = flow(
-  createResult,
-  setField(CHANGES, negate(feedUnchanged)),
-  condId([get(CHANGES), compareItems])
-)
 
 export const addTouched = actionId => flow(
   get(actionId),
@@ -74,4 +68,17 @@ export const addTouched = actionId => flow(
 export const getTouchedIds = flow(
   over([addTouched('created'), addTouched('updated'), addTouched('deleted')]),
   flatten
+)
+
+// export const createResult = buildCompare(indexItemsById, startResultObj)
+export const createResult = (saved, fresh) => ({ saved, fresh })
+export const indexItemsById = replaceField('items', buildIndex)
+export const checkFeed = flow(
+  createResult,
+  setField(CHANGES, negate(feedUnchanged)),
+  condId([get(CHANGES), compareItems]),
+)
+export const checkFeedGetTouched = flow(
+  checkFeed,
+  setField('touchedIds', getTouchedIds)
 )
